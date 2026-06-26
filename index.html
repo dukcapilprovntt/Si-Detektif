@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1C3140">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SI-DETEKTIF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,600;1,700&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="https://lh3.googleusercontent.com/d/1nZRp_uyNV8CbDlD4LJh0PhiX6Jwql0WG" type="image/png">
+</head>
+<body>
+
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Buka menu">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
+<div class="app-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img class="sidebar-logo" src="https://lh3.googleusercontent.com/d/1gJGXW0Xg87eM_SAj8Te_CIBJ6I0BU55w" alt="Logo Pemprov">
+      <div class="sidebar-brand-text">
+        <p class="brand-title-side">SI-DETEKTIF</p>
+        <p class="brand-sub-side">Dashboard Agregat Kependudukan Prov. NTT</p>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav">
+      <button class="nav-item active" data-target="page-dash" onclick="showPage('dash', null, this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="13" width="4" height="8" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="9" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="4" width="4" height="17" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
+        Agregat Kependudukan
+      </button>
+
+      <div class="nav-section-label">Tabel Agregat</div>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 1, this)">1. Jumlah Penduduk &amp; Jenis Kelamin</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 2, this)">2. Perekaman KTP-el</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 3, this)">3. Akta Kelahiran (0–4 Tahun)</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 4, this)">4. Akta Kelahiran (0–18 Tahun)</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 5, this)">5. Akta Kelahiran (Semua Usia)</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 6, this)">6. Kepemilikan KIA</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 7, this)">7. Aktivasi IKD</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 8, this)">8. Akta Kawin</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 9, this)">9. Akta Cerai</button>
+      <button class="nav-item" data-target="page-table" onclick="showPage('table', 10, this)">10. Akta Kematian</button>
+    </nav>
+
+    <div class="sidebar-foot">
+      Disdukcapil Provinsi<br>Nusa Tenggara Timur
+    </div>
+  </aside>
+
+  <main class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="page active" id="page-dash">
+      <div class="dash-header">
+        <p class="eyebrow">Disdukcapil &middot; Provinsi NTT</p>
+        <h1 class="brand-title">SI-DETEKTIF</h1>
+        <p class="brand-sub">Sistem Informasi Dashboard Agregat Kependudukan Interaktif</p>
+      </div>
+
+      <div class="data-toolbar">
+        <span class="status loading" id="statusDash">Memuat data terbaru…</span>
+        <button class="btn" onclick="loadData()" id="refreshBtnDash">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M5.5 9A7.5 7.5 0 0 1 19 8M18.5 15A7.5 7.5 0 0 1 5 16"/></svg>
+          Perbarui data
+        </button>
+      </div>
+
+      <div class="tenun-rule"></div>
+
+      <div class="top-row">
+        <div class="total-card">
+          <h2>Total Penduduk</h2>
+          <div class="period" id="periodLabel">Semester II 2025</div>
+          <div class="donut-wrap">
+            <div class="donut" id="donut"></div>
+            <div class="donut-label left">
+              <span class="lbl">PR</span>
+              <span class="val" id="prVal">—</span>
+            </div>
+            <div class="donut-label right">
+              <span class="lbl">LK</span>
+              <span class="val" id="lkVal">—</span>
+            </div>
+            <div class="donut-hole">
+              <span class="big-num" id="totalNum">—</span>
+            </div>
+          </div>
+          <div class="province" id="provName">Prov. Nusa Tenggara Timur</div>
+        </div>
+
+        <div class="chart-card">
+          <h3>10 Besar Penduduk per Kabupaten/Kota</h3>
+          <canvas id="chartTop10"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card" style="flex:1 1 100%;">
+          <h3 id="progresPanelTitle">Progres Layanan Dokumen Kependudukan Tingkat Provinsi</h3>
+          <canvas id="chartProgres"></canvas>
+        </div>
+      </div>
+
+      <div class="data-panel">
+        <h3 id="statPanelTitle">Data Kependudukan Provinsi Nusa Tenggara Timur</h3>
+        <div class="stat-grid" id="statGrid"></div>
+      </div>
+    </section>
+
+    <!-- ===== TABEL ===== -->
+    <section class="page" id="page-table">
+      <div class="dash-header">
+        <p class="eyebrow">Disdukcapil &middot; Provinsi NTT</p>
+        <h1 class="brand-title">SI-DETEKTIF</h1>
+        <p class="brand-sub">Tabel Agregat Kependudukan</p>
+      </div>
+
+      <div class="data-toolbar">
+        <span class="status loading" id="statusTable">Memuat data terbaru…</span>
+        <button class="btn" onclick="loadData()" id="refreshBtnTable">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M5.5 9A7.5 7.5 0 0 1 19 8M18.5 15A7.5 7.5 0 0 1 5 16"/></svg>
+          Perbarui data
+        </button>
+      </div>
+
+      <div class="tenun-rule"></div>
+
+      <!-- TWO-COLUMN LAYOUT: table left, summary right -->
+      <div class="table-page-layout">
+
+        <!-- LEFT: table + notes -->
+        <div class="table-left-col">
+          <div class="tbl-toolbar">
+            <div class="tbl-title" id="tblTitle"></div>
+            <button class="btn primary" onclick="downloadCurrentTableXlsx()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+              Download XLSX
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead id="tblHead"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="tbl-note" id="tblNote"></div>
+        </div>
+
+        <!-- RIGHT: summary panel -->
+        <div class="summary-panel" id="summaryPanel">
+          <div class="summary-no-data" id="summaryEmpty">
+            Pilih tabel untuk melihat ringkasan data.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="mascot-float" id="mascotFloat"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
