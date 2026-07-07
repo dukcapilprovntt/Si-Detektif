@@ -442,15 +442,29 @@ function getTables(data){
         <th class="num">Belum Memiliki Dinamis</th><th class="num">Persen Dinamis (%)</th></tr>`,
       provRowHtml:(()=>{
         const p=provRow(kia);
+        const pPer = provRow(per);
+
         return provTr([td(''),td('Nusa Tenggara Timur'),tdN(p.KODE||'-'),
-          tdN(fmt(num(p["JUMLAH PENDUDUK"]))),tdN(fmt(num(p["JUMLAH AWAL(JML)"]))),
+          tdN(fmt(num(pPer["JUMLAH PENDUDUK"]))),
+          tdN(fmt(num(p["JUMLAH AWAL(JML)"]))),
           tdN(fmt(num(p["JUMLAH DINAMIS(TTL)"]))),tdN(fmt(num(p["MEMILIKI DINAMIS(JML)"]))),
           tdN(fmt(num(p["BELUM MEMILIKI DINAMIS(JML)"]))),tdN(fmtPct(numPct(p["PERSEN DINAMIS(%)"])))]);
       })(),
-      bodyRows: kabRows(kia).map((r,i)=>`<tr>${td(i+1)}${td(wilayahLabel(r.WILAYAH))}${tdN(r.KODE||'-')}
-        ${tdN(fmt(num(r["JUMLAH PENDUDUK"])))}${tdN(fmt(num(r["JUMLAH AWAL(JML)"])))}
-        ${tdN(fmt(num(r["JUMLAH DINAMIS(TTL)"])))}${tdN(fmt(num(r["MEMILIKI DINAMIS(JML)"])))}
-        ${tdN(fmt(num(r["BELUM MEMILIKI DINAMIS(JML)"])))}${tdN(fmtPct(numPct(r["PERSEN DINAMIS(%)"])))}</tr>`),
+      bodyRows: kabRows(kia).map((r,i)=>{
+        const perRow = kabRows(per).find(x => x.KODE == r.KODE) || {};
+
+        return `<tr>
+          ${td(i+1)}
+          ${td(wilayahLabel(r.WILAYAH))}
+          ${tdN(r.KODE || '-')}
+          ${tdN(fmt(num(perRow["JUMLAH PENDUDUK"])))}
+          ${tdN(fmt(num(r["JUMLAH AWAL(JML)"])))}
+          ${tdN(fmt(num(r["JUMLAH DINAMIS(TTL)"])))}
+          ${tdN(fmt(num(r["MEMILIKI DINAMIS(JML)"])))}
+          ${tdN(fmt(num(r["BELUM MEMILIKI DINAMIS(JML)"])))}
+          ${tdN(fmtPct(numPct(r["PERSEN DINAMIS(%)"])))}
+        </tr>`;
+      }),
       note: note2Cards(
         note2(kabRows(kia), r=>numPct(r["PERSEN DINAMIS(%)"]), 'Persen KIA', fmtPct),
         note2(kabRows(kia), r=>num(r["BELUM MEMILIKI DINAMIS(JML)"]), 'Belum Memiliki KIA')
