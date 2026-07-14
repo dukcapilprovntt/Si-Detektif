@@ -168,9 +168,13 @@ function getLastDayPrevMonth(){
   const last = new Date(now.getFullYear(), now.getMonth(), 0);
   return last.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
 }
+// function getSemester(){
+//   const now = new Date(); const m = now.getMonth()+1; const y = now.getFullYear();
+//   return m <= 6 ? `Semester II ${y-1}` : `Semester I ${y}`;
+// }
 function getSemester(){
   const now = new Date(); const m = now.getMonth()+1; const y = now.getFullYear();
-  return m <= 6 ? `Semester II ${y-1}` : `Semester I ${y}`;
+  return `Semester II 2025`;
 }
 
 function renderTotal(jpArr){
