@@ -380,7 +380,8 @@ function getTables(data){
   return [
     /* 1. Jumlah Penduduk */
     {
-      title:`REKAPITULASI JUMLAH PENDUDUK – JENIS KELAMIN PROVINSI NTT\n${sem.toUpperCase()}`,
+      // title:`REKAPITULASI JUMLAH PENDUDUK – JENIS KELAMIN PROVINSI NTT\n${sem.toUpperCase()}`,
+      title:`REKAPITULASI JUMLAH PENDUDUK – JENIS KELAMIN PROVINSI NTT\n Semester II 2025`,
       head:`<tr><th>No</th><th>Wilayah</th><th>Kode</th>
         <th class="num">Total Penduduk</th><th class="num">Laki-Laki (LK)</th>
         <th class="num">Persen LK</th><th class="num">Perempuan (PR)</th><th class="num">Persen PR</th></tr>`,
