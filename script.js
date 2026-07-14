@@ -703,7 +703,7 @@ function loadData(){
       setStatus('ok', 'Data termutakhir');
     })
     .catch(function(err){
-      setStatus('error', 'Gagal memuat data. Pastikan Web App Apps Script sudah di-deploy dengan akses "Anyone", URL-nya benar di script.js, lalu tekan "Perbarui data".');
+      setStatus('error', 'Gagal memuat data. Pastikan Web App Apps Script sudah di-deploy dengan akses "Anyone" dan URL-nya benar di script.js, lalu muat ulang halaman.');
       console.error('Gagal mengambil data dari server:', err);
     })
     .finally(function(){
