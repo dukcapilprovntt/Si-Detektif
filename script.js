@@ -172,6 +172,10 @@ function getSemester(){
   const now = new Date(); const m = now.getMonth()+1; const y = now.getFullYear();
   return m <= 6 ? `Semester II ${y-1}` : `Semester I ${y}`;
 }
+// function getSemester(){
+//   const now = new Date(); const m = now.getMonth()+1; const y = now.getFullYear();
+//   return `Semester II 2025`;
+// }
 
 function renderTotal(jpArr){
   const p = provRow(jpArr);
@@ -559,20 +563,53 @@ function getTables(data){
 
     /* 10. Akta Kematian */
     {
-      title:`REKAPITULASI KEPEMILIKAN AKTA KEMATIAN PROVINSI NTT\nKEADAAN ${tgl.toUpperCase()}`,
-      head:`<tr><th>No</th><th>Wilayah</th><th>Kode</th>
-        <th class="num">Jumlah Penduduk</th><th class="num">MENINGGAL(JML)</th></tr>`,
-      provRowHtml:(()=>{
-        const p=provRow(amt);
-        const jpProv = provRow(jp);
-        const jmlPendProv = num(jpProv["PENDUDUK(JML)"]) || (num(jpProv["PENDUDUK(LK)"])+num(jpProv["PENDUDUK(PR)"]));
-        return provTr([td(''),td('Nusa Tenggara Timur'),tdN(p.KODE||'-'),
-          tdN(fmt(jmlPendProv)),tdN(fmt(num(p["MENINGGAL(JML)"])))]);
-      })(),
-      bodyRows: kabRows(amt).map((r,i)=>`<tr>${td(i+1)}${td(wilayahLabel(r.WILAYAH))}${tdN(r.KODE||'-')}
-        ${tdN(fmt(jpFromMap(jpMap, r.WILAYAH)))}${tdN(fmt(num(r["MENINGGAL(JML)"])))}</tr>`),
-      note: note2(kabRows(amt), r=>num(r["MENINGGAL(JML)"]), 'MENINGGAL(JML)')
-    }
+        title:`REKAPITULASI KEPEMILIKAN AKTA KEMATIAN PROVINSI NTT KEADAAN ${tgl.toUpperCase()}`,
+        head:`<tr>
+          <th>No</th>
+          <th>Wilayah</th>
+          <th>Kode</th>
+          <th class="num">Jumlah Penduduk</th>
+          <th class="num">MENINGGAL(LK)</th>
+          <th class="num">MENINGGAL(PR)</th>
+          <th class="num">MENINGGAL(JML)</th>
+        </tr>`,
+
+        provRowHtml:(()=>{
+          const p = provRow(amt);
+          const jpProv = provRow(jp);
+
+          const jmlPendProv =
+            num(jpProv["PENDUDUK(JML)"]) ||
+            (num(jpProv["PENDUDUK(LK)"]) + num(jpProv["PENDUDUK(PR)"]));
+
+          return provTr([
+            td(''),
+            td('Nusa Tenggara Timur'),
+            tdN(p.KODE || '-'),
+            tdN(fmt(jmlPendProv)),
+            tdN(fmt(num(p["MENINGGAL(LK)"]))),
+            tdN(fmt(num(p["MENINGGAL(PR)"]))),
+            tdN(fmt(num(p["MENINGGAL(JML)"])))
+          ]);
+        })(),
+
+        bodyRows: kabRows(amt).map((r,i)=>`
+          <tr>
+            ${td(i+1)}
+            ${td(wilayahLabel(r.WILAYAH))}
+            ${tdN(r.KODE || '-')}
+            ${tdN(fmt(jpFromMap(jpMap, r.WILAYAH)))}
+            ${tdN(fmt(num(r["MENINGGAL(LK)"])))}
+            ${tdN(fmt(num(r["MENINGGAL(PR)"])))}
+            ${tdN(fmt(num(r["MENINGGAL(JML)"])))}
+          </tr>`),
+
+        note: note2(
+          kabRows(amt),
+          r => num(r["MENINGGAL(JML)"]),
+          'MENINGGAL(JML)'
+        )
+      }
   ];
 }
 
