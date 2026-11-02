@@ -520,7 +520,7 @@ function getTables(data){
 
     /* 8. Akta Kawin */
     {
-      title:`REKAPITULASI KEPEMILIKAN AKTA KAWIN PROVINSI NTT\nKEADAAN ${tgl.toUpperCase()}`,
+      title:`REKAPITULASI KEPEMILIKAN AKTA KAWIN PROVINSI NTT\nKEADAAN ${sem.toUpperCase()}`,
       head:`<tr><th>No</th><th>Wilayah</th><th>Kode</th>
         <th class="num">Jumlah Penduduk</th><th class="num">Wajib Akta Kawin</th>
         <th class="num">Memiliki Akta Kawin</th><th class="num">Belum Memiliki Akta Kawin</th>
@@ -546,7 +546,7 @@ function getTables(data){
 
     /* 9. Akta Cerai */
     {
-      title:`REKAPITULASI KEPEMILIKAN AKTA CERAI PROVINSI NTT\nKEADAAN ${tgl.toUpperCase()}`,
+      title:`REKAPITULASI KEPEMILIKAN AKTA CERAI PROVINSI NTT\nKEADAAN ${sem.toUpperCase()}`,
       head:`<tr><th>No</th><th>Wilayah</th><th>Kode</th>
         <th class="num">Jumlah Penduduk</th><th class="num">Memiliki Akta Cerai</th></tr>`,
       provRowHtml:(()=>{
