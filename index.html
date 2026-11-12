@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Si-Detektif | Portal Publik Arsip Data Kependudukan</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= APP SCREEN (PUBLIK — TANPA LOGIN) ================= -->
+  <div id="app-screen">
+    <div class="shell">
+
+      <!-- ---- SIDEBAR / NAVBAR KIRI ---- -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <div class="sidebar-mark" id="sidebar-mark">SK</div>
+          <div class="sidebar-title"><span class="st-1">Si-</span><span class="st-2">Detektif</span>
+            <small>SISTEM INFORMASI DASHBOARD AGREGAT KEPENDUDUKAN INTERAKTIF</small>
+          </div>
+        </div>
+
+        <div class="sidebar-public">
+          <span class="dot"></span> Portal Publik &middot; Lihat &amp; Unduh
+        </div>
+
+        <nav class="menu" id="menu-container">
+          <!-- diisi oleh JavaScript.html -->
+        </nav>
+
+        <div class="sidebar-foot">
+          Dinas Kependudukan dan Pencatatan Sipil<br>Provinsi Nusa Tenggara Timur
+        </div>
+      </aside>
+
+      <!-- ---- CONTENT ---- -->
+      <div class="content">
+        <div class="topbar">
+          <div style="display:flex;align-items:center;">
+            <button id="menu-toggle">☰</button>
+            <div>
+              <div class="breadcrumb" id="breadcrumb">Beranda</div>
+              <div class="page-title" id="page-title">Beranda</div>
+            </div>
+          </div>
+          <div class="search-box">
+            <span class="search-ico">🔎</span>
+            <input type="text" id="global-search" placeholder="Cari nama dokumen, wilayah, atau kategori...">
+          </div>
+        </div>
+        <div class="main" id="main-content">
+          <!-- diisi dinamis -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="preview-modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-title" id="modal-title">Pratinjau Dokumen</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-foot" id="modal-foot"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
