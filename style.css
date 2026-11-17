@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root{
   --blue-950:#071A3D;
@@ -255,7 +255,7 @@ table.dtable tr:hover td{background:var(--blue-50);}
 .modal-close:hover{background:var(--blue-100);}
 .modal-body{padding:18px;overflow:auto;flex:1;background:var(--blue-50);}
 .modal-foot{
-  padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex:none;
+  padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex:none;flex-wrap:wrap;
 }
 .preview-text{
   white-space:pre-wrap;word-break:break-word;font-family:'JetBrains Mono',monospace;
@@ -340,3 +340,78 @@ details.gloss{border-bottom:1px solid var(--line);padding:10px 2px;}
 details.gloss:last-child{border-bottom:none;}
 details.gloss summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--blue-900);}
 details.gloss p{margin:8px 0 2px;font-size:12.8px;line-height:1.6;color:var(--ink-soft);}
+
+/* ==========================================================
+   POSTER / INFOGRAFIS  (kertas F4 215 x 330 mm = 813 x 1247 px)
+   ========================================================== */
+.modal-box.wide{max-width:900px;}
+.pst-stage{display:flex;justify-content:center;width:100%;}
+.pst-fit{position:relative;flex:none;overflow:hidden;background:#fff;box-shadow:0 8px 30px rgba(7,26,61,.25);}
+
+.pst{
+  --navy:#2B3A47; --orange:#FF9D5C; --green:#14C46C; --red:#FF6B6B;
+  position:relative;background:#fff;color:var(--navy);overflow:hidden;
+  font-family:'Poppins','Plus Jakarta Sans',system-ui,sans-serif;
+  display:flex;flex-direction:column;text-align:left;
+}
+.pst *{box-sizing:border-box;}
+
+/* -- kepala -- */
+.pst-top{position:relative;height:178px;flex:none;}
+.pst-orange{position:absolute;left:0;top:48px;width:76px;height:92px;background:var(--orange);}
+.pst-pill{
+  position:absolute;left:84px;top:48px;height:92px;width:340px;background:var(--navy);
+  border-radius:16px 46px 46px 16px;display:flex;align-items:center;gap:14px;padding:0 24px 0 22px;
+}
+.pst-logo{width:50px;height:62px;object-fit:contain;flex:none;}
+.pst-pill-t{color:#fff;font-weight:700;font-size:11.5px;line-height:1.4;letter-spacing:.2px;}
+.pst-social{position:absolute;right:44px;top:50px;display:flex;flex-direction:column;gap:10px;}
+.pst-soc{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:#1F2A35;}
+.pst-soc i{width:22px;height:22px;border-radius:7px;background:var(--navy);display:flex;align-items:center;justify-content:center;flex:none;}
+.pst-soc svg{width:13px;height:13px;display:block;}
+
+/* -- kartu gelap + judul -- */
+.pst-card{margin:0 32px;background:var(--navy);border-radius:38px;padding:30px 28px;flex:none;}
+.pst-title{
+  background:var(--orange);color:#fff;text-align:center;font-weight:700;font-size:15px;line-height:1.4;
+  border-radius:30px;padding:12px 30px;margin:0 26px 22px;
+}
+
+/* -- tabel -- */
+.pst-table{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;}
+.pst-table th{
+  background:var(--orange);color:#fff;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.3px;
+  text-align:center;padding:6px 3px;line-height:1.25;border:1px solid rgba(255,255,255,.55);
+}
+.pst-table td{
+  height:var(--rh,26px);font-size:var(--fs,10.5px);text-align:center;padding:0 4px;color:var(--navy);
+  border:1px solid #3B4A57;white-space:nowrap;overflow:hidden;
+}
+.pst-table td.hi{background:var(--green);color:#fff;font-weight:700;}
+.pst-table td.lo{background:var(--red);color:#fff;font-weight:700;}
+
+/* -- keterangan -- */
+.pst-ket{padding:26px 46px 0;}
+.pst-ket-h{font-weight:700;font-size:17px;line-height:1.2;}
+.pst-ket-s{font-size:12.5px;margin:3px 0 10px;}
+.pst-box{display:inline-block;border-radius:12px;padding:10px 20px;color:#fff;font-weight:500;font-size:12.5px;line-height:1.6;margin-bottom:12px;}
+.pst-box b{font-weight:700;}
+.pst-box.g{background:var(--green);}
+.pst-box.r{background:var(--red);}
+
+/* -- poster: baris provinsi tebal, wilayah boleh turun baris, keterangan 2 kolom -- */
+.pst-table tr.prov td{font-weight:700;}
+.pst-table td.wil{white-space:normal;line-height:1.15;}
+.pst-table td.wil.hi,.pst-table td.wil.lo{font-weight:700;color:#fff;}
+.pst-table td.wil.hi{background:var(--green);}
+.pst-table td.wil.lo{background:var(--red);}
+.pst-ket-cols{display:flex;gap:18px;align-items:flex-start;}
+.pst-ket-col{flex:1 1 0;min-width:0;}
+.pst-ket-cols.one .pst-ket-col{flex:0 0 62%;}
+.pst-ket-col .pst-ket-s{font-size:11.5px;margin:3px 0 10px;}
+.pst-box2{display:flex;gap:14px;border-radius:12px;padding:9px 16px;color:#fff;font-size:11.5px;line-height:1.6;margin-bottom:11px;}
+.pst-box2 .bl{flex:none;min-width:78px;font-weight:500;}
+.pst-box2 .bw{flex:1;min-width:0;font-weight:500;}
+.pst-box2 b{font-weight:700;}
+.pst-box2.g{background:var(--green);}
+.pst-box2.r{background:var(--red);}
