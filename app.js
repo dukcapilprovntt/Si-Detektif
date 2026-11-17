@@ -547,6 +547,7 @@ function filesPanel(files, wilayah, kategori, isSiak, isSearch) {
     html += '<div class="empty-state"><div class="big">🗄</div>Belum ada dokumen ditemukan.</div>';
   } else {
     files.forEach(function (f) {
+      FILE_META[f.id] = Object.assign({ kategori: kategori }, f);
       const tag = f.tahun ? '<span class="tag-chip">' + (f.bulan ? f.bulan + ' ' : '') + f.tahun + '</span>' : '';
       const ctx = isSearch ? '<div class="file-meta">' + (f.jenis === 'siak' ? 'Konsolidasi SIAK' : (f.wilayah + ' / ' + f.kategori)) + '</div>' : '';
       html += '<div class="file-row">' +
@@ -581,6 +582,10 @@ let currentPreviewFileId = null;
 let currentPreviewName = null;
 let currentSheetsData = null;
 let currentSheetsNotes = [];
+let currentPreviewMeta = {};   // metadata file terpilih (bulan, tahun, kategori, dst.)
+let currentPoster = null;      // model poster bila pratinjau berupa tabel agregat
+let posterViewMode = 'poster';
+const FILE_META = {};          // id file -> data dari daftar dokumen
 
 function isExcelMime(mime, name) {
   mime = mime || '';
@@ -594,6 +599,8 @@ function isExcelMime(mime, name) {
 function previewFile(fileId, mime, name) {
   currentPreviewFileId = fileId;
   currentPreviewName = name;
+  currentPreviewMeta = FILE_META[fileId] || {};
+  currentPoster = null;
   openModal(name || 'Pratinjau Dokumen', true);
 
   if (isExcelMime(mime, name)) {
@@ -650,11 +657,18 @@ function renderSpreadsheetPreview(res) {
   currentSheetsData = res.sheets;
   currentSheetsNotes = res.notes || [];
   document.getElementById('modal-title').textContent = res.name;
-  renderSheetTable(0);
+  const first = res.sheets && res.sheets[0];
+  if (first && isPosterTable(first.rows)) {
+    currentPoster = buildPosterModel(first.rows, currentPreviewMeta, res.name);
+    document.querySelector('#preview-modal .modal-box').classList.add('wide');
+    showPosterView('poster');
+  } else {
+    renderSheetTable(0);
+  }
   setModalFooter();
 }
 
-function renderSheetTable(idx) {
+function renderSheetTable(idx, topHtml) {
   const sheets = currentSheetsData;
   if (!sheets || !sheets.length) {
     document.getElementById('modal-body').innerHTML = '<div class="empty-state">Sheet kosong.</div>';
@@ -685,13 +699,22 @@ function renderSheetTable(idx) {
     notesHtml = '<div style="font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:8px 12px;margin-bottom:10px;">' +
       currentSheetsNotes.map(escapeHtml).join('<br>') + '</div>';
   }
-  document.getElementById('modal-body').innerHTML = notesHtml + tabsHtml + tableHtml;
+  document.getElementById('modal-body').innerHTML = (topHtml || '') + notesHtml + tabsHtml + tableHtml;
 }
 
 function setModalFooter() {
+  const primary = 'background:linear-gradient(135deg,var(--blue-600),var(--blue-800));color:#fff;border-color:transparent;';
+  if (currentPoster) {
+    document.getElementById('modal-foot').innerHTML =
+      '<button class="btn-sm" onclick="closeModal()">Tutup</button>' +
+      '<button class="btn-sm" onclick="downloadCurrentPreview()">Unduh Excel</button>' +
+      '<button class="btn-sm" onclick="downloadPosterImage()">Unduh Gambar (PNG)</button>' +
+      '<button class="btn-sm" style="' + primary + '" onclick="downloadPosterPdf()">Unduh PDF</button>';
+    return;
+  }
   document.getElementById('modal-foot').innerHTML =
     '<button class="btn-sm" onclick="closeModal()">Tutup</button>' +
-    '<button class="btn-sm" style="background:linear-gradient(135deg,var(--blue-600),var(--blue-800));color:#fff;border-color:transparent;" onclick="downloadCurrentPreview()">Unduh Dokumen</button>';
+    '<button class="btn-sm" style="' + primary + '" onclick="downloadCurrentPreview()">Unduh Dokumen</button>';
 }
 
 function downloadCurrentPreview() {
@@ -750,6 +773,10 @@ function closeModal() {
   currentPreviewName = null;
   currentSheetsData = null;
   currentSheetsNotes = [];
+  currentPoster = null;
+  currentPreviewMeta = {};
+  const box = document.querySelector('#preview-modal .modal-box');
+  if (box) box.classList.remove('wide');
 }
 
 /* ---------------- UTIL UI ---------------- */
@@ -786,4 +813,460 @@ function showFullLoader(msg) {
 function hideFullLoader() {
   const el = document.getElementById('full-loader');
   if (el) el.style.display = 'none';
+}
+
+/* ==========================================================
+   POSTER / INFOGRAFIS  (tampilan di pratinjau + unduh PDF/PNG)
+   Kertas F4/Folio 215 x 330 mm  (= 813 x 1247 px pada 96 dpi)
+   ========================================================== */
+const POSTER_W = 813;
+const POSTER_H = 1247;
+const POSTER_MM = { w: 215, h: 330 };
+const POSTER_LOGO = 'logo_pemprov.png';   // file di folder yang sama dengan index.html
+const POSTER_SOCIAL = { instagram: 'dukcapilprovntt', tiktok: 'dukcapilprovntt', web: 'dukcapilprovntt.id' };
+const POSTER_LIB = {
+  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+};
+
+/* Tabel hasil getFilteredPreview_ selalu berawalan header: No | Wilayah | Kode | ... */
+function isPosterTable(rows) {
+  if (!rows || rows.length < 2) return false;
+  const h = rows[0];
+  return h.length >= 4 && h[0] === 'No' && h[1] === 'Wilayah' && h[2] === 'Kode';
+}
+
+function parsePctCell(s) {
+  if (s === null || s === undefined) return null;
+  let t = String(s).replace('%', '').replace(/\s/g, '');
+  if (!t || t === '-') return null;
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+}
+
+function posterTitleCase(s) {
+  return String(s).toLowerCase().replace(/(^|\s)(\S)/g, function (m, a, b) { return a + b.toUpperCase(); });
+}
+
+/* "KUPANG" + kode 53.01 -> "KAB. KUPANG";  kode 53.71 -> "KOTA KUPANG" */
+function posterWilayah(name, kode, isProv) {
+  let n = String(name || '').trim().toUpperCase();
+  if (isProv) return n;
+  if (/^(KABUPATEN|KAB\.?)\s/.test(n)) return n.replace(/^(KABUPATEN|KAB\.?)\s+/, 'KAB. ');
+  if (/^KOTA\s/.test(n)) return n;
+  return (/^\d{2}\.7\d$/.test(kode) ? 'KOTA ' : 'KAB. ') + n;
+}
+
+function posterPeriode(bulan, tahun) {
+  const b = String(bulan || '').trim();
+  const t = tahun ? String(tahun) : '';
+  const m = b.match(/^(?:semester|smt)?\s*(II|I|1|2)$/i);
+  if (m) {
+    const romawi = /^(ii|2)$/i.test(m[1]) ? 'II' : 'I';
+    return 'SEMESTER ' + romawi + (t ? ' TAHUN ' + t : '');
+  }
+  return (b ? b.toUpperCase() : '') + (t ? ' TAHUN ' + t : '');
+}
+
+/* Aturan per jenis agregat: judul poster, judul kolom, jumlah daerah yang disorot (n),
+   serta kolom persen / absolut / jumlah yang dipakai untuk sorotan & keterangan.
+   Nama kolom (pct, abs, count) = label kolom dari getFilteredPreview_ di Code.gs. */
+const POSTER_KIND = {
+  ktp: {
+    judul: 'JUMLAH PEREKAMAN KTP-EL', provBold: true, n: 3,
+    heads: ['Jumlah Penduduk', 'Wajib KTP-EL', 'Wajib KTP-EL (Dinamis)', 'Belum Rekam (Dinamis)', 'Rekam', 'Persen (%)'],
+    pct: 'Progres (%)', pctJudul: '1. Kabupaten Dengan Perekaman Relatif (Persentase)',
+    abs: 'Progres Belum Rekam', absJudul: '2. Absolut (Kuantitas) Belum Terekam', satuan: 'Orang'
+  },
+  akta04: {
+    judul: 'JUMLAH MEMILIKI AKTA KELAHIRAN (0-4 TAHUN)', provBold: true, n: 3,
+    heads: ['Wajib Akta', 'Wajib Akta (Dinamis)', 'Memiliki Akta (Dinamis)', 'Belum Memiliki Akta (Dinamis)', 'Persen (%)'],
+    pct: 'Persen Dinamis (%)', pctJudul: '1. Kabupaten Tertinggi Memiliki Akta Kelahiran (Persentase)',
+    abs: 'Belum Memiliki Dinamis', absJudul: '2. Absolut (Kuantitas) Belum Memiliki Akta Kelahiran', satuan: 'Orang'
+  },
+  akta018: {
+    judul: 'JUMLAH MEMILIKI AKTA LAHIR 0-18 TAHUN', provBold: false, n: 2,
+    heads: ['Wajib Akta', 'Wajib Akta (Dinamis)', 'Memiliki Akta Lahir (Dinamis)', 'Belum Memiliki Akta Lahir (Dinamis)', 'Persen (%)'],
+    pct: 'Persen Dinamis (%)', pctJudul: '1. Kabupaten Tertinggi Akta Kelahiran (Persentase)',
+    abs: 'Belum Memiliki Dinamis', absJudul: '2. Absolut (Kuantitas) Belum Memiliki Akta Lahir', satuan: 'Orang'
+  },
+  aktaAll: {
+    judul: 'JUMLAH MEMILIKI AKTA KELAHIRAN', provBold: true, n: 3,
+    heads: ['Wajib Akta', 'Wajib Akta (Dinamis)', 'Memiliki Akta (Dinamis)', 'Belum Memiliki Akta (Dinamis)', 'Persen (%)'],
+    pct: 'Persen Dinamis (%)', pctJudul: '1. Kabupaten Tertinggi Memiliki Akta Kelahiran (Persentase)',
+    abs: 'Belum Memiliki Dinamis', absJudul: '2. Absolut (Kuantitas) Belum Memiliki Akta Kelahiran', satuan: 'Orang'
+  },
+  kia: {
+    judul: 'JUMLAH MEMILIKI KIA', provBold: true, n: 3,
+    heads: ['Jumlah Penduduk', 'Wajib KIA', 'Wajib KIA (Dinamis)', 'Memiliki KIA (Dinamis)', 'Belum Memiliki KIA (Dinamis)', 'Persen (%)'],
+    pct: 'Persen Dinamis (%)', pctJudul: '1. Kabupaten Kepemilikan KIA Relatif (Persentase)',
+    abs: 'Belum Memiliki Dinamis', absJudul: '2. Absolut (Kuantitas) Belum Memiliki KIA', satuan: 'Orang'
+  },
+  ikd: {
+    judul: 'JUMLAH AKTIVASI IKD', provBold: false, n: 2,
+    heads: ['Rekam', 'Jumlah IKD', 'Belum Aktivasi IKD', 'Persen (%)'],
+    pct: 'Persen IKD (%)', pctJudul: '1. Relatif (Persentase) kabupaten Memiliki IKD'
+  },
+  kematian: {
+    judul: 'JUMLAH MEMILIKI AKTA KEMATIAN', provBold: true, n: 2,
+    heads: ['Jumlah Penduduk', 'Meninggal Laki-Laki', 'Meninggal Perempuan', 'Memiliki Akta Kematian'],
+    count: 'MENINGGAL(JML)', countJudul: '1. Kabupaten Tertinggi Akta Kematian', satuan: 'Akta Kematian'
+  },
+  kawin: {
+    judul: 'JUMLAH MEMILIKI AKTA KAWIN', provBold: true, n: 3,
+    heads: ['Jumlah Penduduk', 'Wajib Akta Kawin', 'Memiliki Akta Kawin', 'Belum Memiliki Akta Kawin', 'Persen (%)'],
+    pct: 'Persen Memiliki (%)', pctJudul: '1. Kabupaten Kepemilikan Akta Kawin Relatif (Persentase)',
+    abs: 'Belum Memiliki Akta Kawin', absJudul: '2. Absolut (Kuantitas) Belum Memiliki Akta Kawin', satuan: 'Orang'
+  },
+  cerai: {
+    judul: 'JUMLAH MEMILIKI AKTA CERAI', provBold: true, n: 2,
+    heads: ['Jumlah Penduduk', 'Memiliki Akta Cerai'],
+    count: 'Memiliki Akta Cerai', countJudul: '1. Kabupaten Tertinggi Akta Cerai', satuan: 'Akta Cerai'
+  }
+};
+
+/* Jenis agregat dikenali dari nama kolom hasil pratinjau (bukan dari nama file) */
+function detectPosterKind(labels, hint) {
+  const has = function (l) { return labels.indexOf(l) !== -1; };
+  if (has('Persen LK') && has('Persen PR')) return 'penduduk';
+  if (has('WKTP Awal')) return 'ktp';
+  if (has('Belum Aktivasi IKD')) return 'ikd';
+  if (has('MENINGGAL(JML)')) return 'kematian';
+  if (has('Wajib Akta Kawin')) return 'kawin';
+  if (has('Memiliki Akta Cerai')) return 'cerai';
+  if (has('Jumlah Awal') && has('Persen Dinamis (%)')) return 'kia';
+  if (has('Wajib Akta Awal')) {
+    if (/0\s*-\s*4/.test(hint)) return 'akta04';
+    if (/0\s*-\s*18/.test(hint)) return 'akta018';
+    return 'aktaAll';
+  }
+  return null;
+}
+
+function parseCountCell(s) {
+  if (s === null || s === undefined) return null;
+  let t = String(s).replace(/\s/g, '');
+  if (!t || t === '-') return null;
+  t = t.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+}
+
+function normPctCell(s) {
+  if (String(s).indexOf('%') !== -1) return s;
+  const v = parsePctCell(s);
+  return v === null ? s : v.toFixed(2).replace('.', ',') + '%';
+}
+
+/* "KEADAAN 31 OKTOBER 2026" = hari terakhir bulan dokumen */
+function posterKeadaan(bulan, tahun) {
+  const nm = String(bulan || '').trim().toLowerCase();
+  const idx = (BULAN_LIST || []).map(function (x) { return String(x).toLowerCase(); }).indexOf(nm);
+  if (idx === -1 || !tahun) return '';
+  const last = new Date(Number(tahun), idx + 1, 0).getDate();
+  return 'KEADAAN ' + last + ' ' + String(BULAN_LIST[idx]).toUpperCase() + ' ' + tahun;
+}
+
+/* Sorotan + kotak keterangan untuk jenis agregat selain Jumlah Penduduk */
+function buildKetByKind(spec, kab, idxOf) {
+  const n = spec.n, cols = [];
+
+  function section(label, judul, goodHigh, satuan, parser) {
+    const ci = idxOf(label);
+    if (ci < 0) return;
+    const vals = [];
+    kab.forEach(function (r) {
+      const v = parser(r.cells[ci]);
+      if (v !== null) vals.push({ r: r, v: v });
+    });
+    if (vals.length < n * 2) return;
+    const high = vals.slice().sort(function (a, b) { return b.v - a.v; }).slice(0, n);
+    const low = vals.slice().sort(function (a, b) { return a.v - b.v; }).slice(0, n);
+    const good = goodHigh ? high : low, bad = goodHigh ? low : high;
+    good.forEach(function (x) { x.r.marks[ci] = 'hi'; });
+    bad.forEach(function (x) { x.r.marks[ci] = 'lo'; });
+    const lines = function (items) {
+      return items.map(function (x, i) {
+        return (i + 1) + '. ' + escapeHtml(posterTitleCase(x.r.nama)) + ' <b>' +
+          escapeHtml(x.r.cells[ci] + (satuan ? ' ' + satuan : '')) + '</b>';
+      });
+    };
+    cols.push({
+      judul: judul,
+      boxes: [
+        { cls: 'g', label: goodHigh ? 'Tertinggi' : 'Terendah', lines: lines(good) },
+        { cls: 'r', label: goodHigh ? 'Terendah' : 'Tertinggi', lines: lines(bad) }
+      ]
+    });
+  }
+
+  if (spec.pct) section(spec.pct, spec.pctJudul, true, '', parsePctCell);
+  if (spec.abs) section(spec.abs, spec.absJudul, false, spec.satuan, parseCountCell);   // makin sedikit yang belum = makin baik
+  if (spec.count) section(spec.count, spec.countJudul, true, spec.satuan, parseCountCell);
+  return cols.length ? { type: 'cols', cols: cols } : null;
+}
+
+function buildPosterModel(rows, meta, fileName) {
+  meta = meta || {};
+  const labels = rows[0];
+  const kind = detectPosterKind(labels, String(meta.kategori || '') + ' ' + String(fileName || ''));
+  const spec = (kind && kind !== 'penduduk') ? POSTER_KIND[kind] : null;
+  const isPenduduk = kind === 'penduduk';
+  const idxOf = function (l) { const i = labels.indexOf(l); return i === -1 ? -1 : i - 2; };
+
+  // baris + penomoran ulang (baris provinsi tidak diberi nomor)
+  let seq = 0;
+  const list = rows.slice(1).map(function (r) {
+    const kode = String(r[2] || '').trim();
+    const isProv = /^\d{2}$/.test(kode) || /^(NUSA\s*TENGGARA\s*TIMUR|PROVINSI)/i.test(String(r[1] || '').trim());
+    return {
+      isProv: isProv, no: isProv ? '' : String(++seq),
+      nama: posterWilayah(r[1], kode, isProv),
+      cells: r.slice(2), marks: {}, green: false, red: false
+    };
+  });
+  const kab = list.filter(function (r) { return !r.isProv; });
+
+  let ket = null, heads = labels.slice(3), provBold = false;
+
+  if (spec) {
+    // seragamkan format kolom persen ("98,23%")
+    if (spec.pct && idxOf(spec.pct) >= 0) {
+      const pc = idxOf(spec.pct);
+      list.forEach(function (r) { r.cells[pc] = normPctCell(r.cells[pc]); });
+    }
+    if (spec.heads.length === heads.length) heads = spec.heads;
+    provBold = !!spec.provBold;
+    ket = buildKetByKind(spec, kab, idxOf);
+  } else {
+    // Jumlah Penduduk (LK/PR), atau tabel lain yang tidak dikenali: sorot kolom persen
+    let specs = [], judulKet = '';
+    if (isPenduduk) {
+      specs = [{ ci: idxOf('Persen LK'), nama: 'Laki-Laki' }, { ci: idxOf('Persen PR'), nama: 'Perempuan' }];
+      judulKet = '1. Relatif (Persentase) kabupaten/kota Jumlah Penduduk';
+    } else {
+      for (let i = labels.length - 1; i >= 3; i--) {
+        if (/persen|%/i.test(labels[i])) {
+          specs = [{ ci: i - 2, nama: '' }];
+          judulKet = '1. Relatif (Persentase) kabupaten/kota &mdash; ' + escapeHtml(labels[i]);
+          break;
+        }
+      }
+    }
+    const lineTinggi = [], lineRendah = [], huruf = 'abcdefgh';
+    specs.forEach(function (sp) {
+      let best = null, worst = null;
+      kab.forEach(function (r) {
+        const v = parsePctCell(r.cells[sp.ci]);
+        if (v === null) return;
+        if (!best || v > best.v) best = { r: r, v: v };
+        if (!worst || v < worst.v) worst = { r: r, v: v };
+      });
+      if (!best || !worst || best.v === worst.v) return;
+      best.r.marks[sp.ci] = 'hi';
+      worst.r.marks[sp.ci] = 'lo';
+      const fmt = function (x, kata) {
+        return huruf[(kata === 'Tertinggi' ? lineTinggi : lineRendah).length] + '. ' + kata + (sp.nama ? ' ' + sp.nama : '') +
+          ' : ' + escapeHtml(posterTitleCase(x.r.nama)) + ' <b>' + escapeHtml(x.r.cells[sp.ci]) + '</b>';
+      };
+      lineTinggi.push(fmt(best, 'Tertinggi'));
+      lineRendah.push(fmt(worst, 'Terendah'));
+    });
+    if (lineTinggi.length) ket = { type: 'simple', judul: judulKet, tinggi: lineTinggi, rendah: lineRendah };
+  }
+
+  // warna sel wilayah: hijau bila ada nilai terbaik, merah bila hanya ada nilai terburuk
+  list.forEach(function (r) {
+    const v = Object.keys(r.marks).map(function (k) { return r.marks[k]; });
+    r.green = v.indexOf('hi') !== -1;
+    r.red = !r.green && v.indexOf('lo') !== -1;
+  });
+
+  // judul: baris 1 = nama rekapitulasi, baris 2 = periode
+  const prov = PROVINSI_LABEL.toUpperCase();
+  let base, periode;
+  if (spec) {
+    base = spec.judul;
+    periode = posterKeadaan(meta.bulan, meta.tahun) || posterPeriode(meta.bulan, meta.tahun);
+  } else {
+    base = String(fileName || '').replace(/\.(xlsx|xls|xlsm)$/i, '')
+      .replace(/\s*[–—-]\s*/g, '-').replace(/^REKAPITULASI\s*/i, '').trim().toUpperCase();
+    periode = posterPeriode(meta.bulan, meta.tahun);
+  }
+  const title = ('REKAPITULASI ' + base + ' ' + prov).replace(/\s+/g, ' ').trim();
+
+  return {
+    title: title, periode: periode, labels: labels, heads: heads, rows: list,
+    isPenduduk: isPenduduk, provBold: provBold, ket: ket,
+    fileBase: (base + (periode ? ' ' + periode : '')).replace(/[\\/:*?"<>|]+/g, '').trim() || 'Rekapitulasi'
+  };
+}
+
+const POSTER_ICONS = {
+  instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff" stroke="none"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.56 5.7 3.1 0 5.62-2.52 5.62-5.62V9.01a7.3 7.3 0 0 0 4.27 1.37V7.3s-1.88.09-3.6-1.48z"/></svg>',
+  web: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>'
+};
+
+function posterHtml(m) {
+  const n = m.rows.length;
+  const rh = n <= 24 ? 26 : Math.max(15, Math.floor(620 / n));
+  const fs = n <= 24 ? 10.5 : Math.max(7.5, 10.5 - (n - 24) * 0.12);
+
+  let head;
+  if (m.isPenduduk) {
+    head = '<colgroup>' + [6, 26, 9, 12, 12, 11, 12, 12].map(function (w) { return '<col style="width:' + w + '%">'; }).join('') + '</colgroup>' +
+      '<thead><tr><th rowspan="2">No</th><th rowspan="2">Wilayah</th><th rowspan="2">Kode</th><th rowspan="2">Total</th><th colspan="4">Jumlah Penduduk</th></tr>' +
+      '<tr><th>Laki-Laki</th><th>Persen (%)</th><th>Perempuan</th><th>Persen (%)</th></tr></thead>';
+  } else {
+    const rest = Math.max(1, m.heads.length);
+    head = '<colgroup><col style="width:5%"><col style="width:26%"><col style="width:8%">' +
+      m.heads.map(function () { return '<col style="width:' + (61 / rest).toFixed(2) + '%">'; }).join('') + '</colgroup>' +
+      '<thead><tr><th>No</th><th>Wilayah</th><th>Kode</th>' +
+      m.heads.map(function (l) { return '<th>' + escapeHtml(l) + '</th>'; }).join('') + '</tr></thead>';
+  }
+
+  const body = m.rows.map(function (r) {
+    let tds = '<td>' + escapeHtml(r.no) + '</td><td class="wil' + (r.green ? ' hi' : (r.red ? ' lo' : '')) + '">' + escapeHtml(r.nama) + '</td>';
+    r.cells.forEach(function (c, ci) {
+      tds += '<td' + (r.marks[ci] ? ' class="' + r.marks[ci] + '"' : '') + '>' + escapeHtml(c) + '</td>';
+    });
+    return '<tr' + (r.isProv && m.provBold ? ' class="prov"' : '') + '>' + tds + '</tr>';
+  }).join('');
+
+  let ket = '';
+  if (m.ket && m.ket.type === 'cols') {
+    ket = '<div class="pst-ket"><div class="pst-ket-h">KETERANGAN:</div>' +
+      '<div class="pst-ket-cols' + (m.ket.cols.length === 1 ? ' one' : '') + '">' +
+      m.ket.cols.map(function (c) {
+        return '<div class="pst-ket-col"><div class="pst-ket-s">' + escapeHtml(c.judul) + '</div>' +
+          c.boxes.map(function (b, i) {
+            return '<div class="pst-box2 ' + b.cls + '"><span class="bl">' + 'ab'.charAt(i) + '. ' + b.label + '</span>' +
+              '<span class="bw">' + b.lines.join('<br>') + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div></div>';
+  } else if (m.ket) {
+    ket = '<div class="pst-ket"><div class="pst-ket-h">KETERANGAN:</div>' +
+      '<div class="pst-ket-s">' + m.ket.judul + '</div>' +
+      '<div class="pst-box g">' + m.ket.tinggi.join('<br>') + '</div><br>' +
+      '<div class="pst-box r">' + m.ket.rendah.join('<br>') + '</div></div>';
+  }
+
+  const soc = function (ico, txt) { return '<div class="pst-soc"><i>' + POSTER_ICONS[ico] + '</i><span>' + escapeHtml(txt) + '</span></div>'; };
+
+  return '<div class="pst" style="width:' + POSTER_W + 'px;height:' + POSTER_H + 'px;">' +
+    '<div class="pst-top">' +
+      '<div class="pst-orange"></div>' +
+      '<div class="pst-pill"><img class="pst-logo" src="' + POSTER_LOGO + '" alt="Logo Pemprov NTT">' +
+        '<div class="pst-pill-t">DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL<br>PROVINSI NUSA TENGGARA TIMUR</div></div>' +
+      '<div class="pst-social">' + soc('instagram', POSTER_SOCIAL.instagram) + soc('tiktok', POSTER_SOCIAL.tiktok) + soc('web', POSTER_SOCIAL.web) + '</div>' +
+    '</div>' +
+    '<div class="pst-card">' +
+      '<div class="pst-title">' + escapeHtml(m.title) + (m.periode ? '<br>' + escapeHtml(m.periode) : '') + '</div>' +
+      '<table class="pst-table" style="--rh:' + rh + 'px;--fs:' + fs + 'px;">' + head + '<tbody>' + body + '</tbody></table>' +
+    '</div>' + ket +
+  '</div>';
+}
+
+/* ---- tampilan di dalam modal ---- */
+function sheetNotesHtml() {
+  if (!currentSheetsNotes || !currentSheetsNotes.length) return '';
+  return '<div style="font-size:12px;color:#92400E;background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:8px 12px;margin-bottom:10px;">' +
+    currentSheetsNotes.map(escapeHtml).join('<br>') + '</div>';
+}
+
+function showPosterView(mode) {
+  if (!currentPoster) return;
+  posterViewMode = mode;
+  const tabs = '<div class="sheet-tabs">' +
+    '<button class="sheet-tab' + (mode === 'poster' ? ' active' : '') + '" onclick="showPosterView(\'poster\')">Tampilan Poster</button>' +
+    '<button class="sheet-tab' + (mode === 'tabel' ? ' active' : '') + '" onclick="showPosterView(\'tabel\')">Tabel Data</button></div>';
+  if (mode === 'tabel') { renderSheetTable(0, tabs); return; }
+  document.getElementById('modal-body').innerHTML = tabs + sheetNotesHtml() +
+    '<div class="pst-stage" id="pst-stage"><div class="pst-fit" id="pst-fit"><div id="pst-host">' + posterHtml(currentPoster) + '</div></div></div>';
+  fitPoster();
+}
+
+function fitPoster() {
+  const stage = document.getElementById('pst-stage');
+  const fit = document.getElementById('pst-fit');
+  const host = document.getElementById('pst-host');
+  if (!stage || !fit || !host) return;
+  const s = Math.min(1, stage.clientWidth / POSTER_W);
+  fit.style.width = (POSTER_W * s) + 'px';
+  fit.style.height = (POSTER_H * s) + 'px';
+  host.style.width = POSTER_W + 'px';
+  host.style.transform = 'scale(' + s + ')';
+  host.style.transformOrigin = 'top left';
+}
+window.addEventListener('resize', function () { if (currentPoster && posterViewMode === 'poster') fitPoster(); });
+
+/* ---- unduh PDF / PNG (dirender di browser, tanpa server) ---- */
+function loadScriptOnce(url) {
+  window.__loadedScripts = window.__loadedScripts || {};
+  if (window.__loadedScripts[url]) return window.__loadedScripts[url];
+  window.__loadedScripts[url] = new Promise(function (resolve, reject) {
+    const sc = document.createElement('script');
+    sc.src = url; sc.onload = resolve;
+    sc.onerror = function () { delete window.__loadedScripts[url]; reject(new Error('Gagal memuat pustaka: ' + url)); };
+    document.head.appendChild(sc);
+  });
+  return window.__loadedScripts[url];
+}
+
+function waitImages(root) {
+  return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function (img) {
+    if (img.complete) return null;
+    return new Promise(function (res) { img.onload = img.onerror = res; });
+  }));
+}
+
+function renderPosterCanvas() {
+  const libs = [loadScriptOnce(POSTER_LIB.html2canvas)];
+  const fonts = document.fonts ? Promise.all([
+    document.fonts.load('400 12px Poppins'), document.fonts.load('600 12px Poppins'), document.fonts.load('700 12px Poppins')
+  ]).catch(function () {}) : Promise.resolve();
+  let holder;
+  return Promise.all(libs.concat([fonts])).then(function () {
+    holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + POSTER_W + 'px;height:' + POSTER_H + 'px;';
+    holder.innerHTML = posterHtml(currentPoster);
+    document.body.appendChild(holder);
+    return waitImages(holder);
+  }).then(function () {
+    const scale = window.innerWidth <= 860 ? 2 : 3;
+    return window.html2canvas(holder.firstElementChild, {
+      scale: scale, useCORS: true, backgroundColor: '#ffffff', width: POSTER_W, height: POSTER_H, logging: false
+    });
+  }).then(function (canvas) { holder.remove(); return canvas; },
+          function (err) { if (holder) holder.remove(); throw err; });
+}
+
+function downloadPosterPdf() {
+  if (!currentPoster) return;
+  const nama = currentPoster.fileBase;
+  showToast('Menyiapkan PDF (kertas F4)...', '');
+  loadScriptOnce(POSTER_LIB.jspdf).then(renderPosterCanvas).then(function (canvas) {
+    const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: [POSTER_MM.w, POSTER_MM.h], compress: true });
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, POSTER_MM.w, POSTER_MM.h, undefined, 'FAST');
+    pdf.save(nama + '.pdf');
+    showToast('PDF berhasil dibuat.', 'success');
+  }).catch(function (err) { showToast('Gagal membuat PDF: ' + err.message, 'error'); });
+}
+
+function downloadPosterImage() {
+  if (!currentPoster) return;
+  const nama = currentPoster.fileBase;
+  showToast('Menyiapkan gambar...', '');
+  renderPosterCanvas().then(function (canvas) {
+    canvas.toBlob(function (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nama + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      showToast('Gambar berhasil dibuat.', 'success');
+    }, 'image/png');
+  }).catch(function (err) { showToast('Gagal membuat gambar: ' + err.message, 'error'); });
 }
