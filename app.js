@@ -85,7 +85,7 @@ let PROVINSI_LABEL = PROVINSI_LABEL_DEFAULT;
 
 const ICONS = {
   beranda: '⌂', agregat: '🗂', provinsi: '🏛', kabkota: '📍',
-  siak: '📄', folder: '📁', file: '📃'
+  siak: '📄', folder: '📁', file: '📃', peta: '🗺'
 };
 
 /* ---------------- INIT ---------------- */
@@ -188,6 +188,8 @@ function buildMenu() {
 
   html += '</div></div>';
 
+  html += menuLink('peta', ICONS.peta, 'Peta Tematik Data Agregat', "navigate('peta')");
+
   el.innerHTML = html;
 }
 
@@ -237,6 +239,9 @@ function navigate(page, params) {
     title.textContent = params.kategori;
     bc.innerHTML = 'Data Agregat Kependudukan / ' + params.wilayah + ' / <b>' + params.kategori + '</b>';
     renderFileList(params.wilayah, params.kategori);
+  } else if (page === 'peta') {
+    title.textContent = 'Peta Tematik Data Agregat'; bc.innerHTML = '<b>Peta Tematik Data Agregat</b>';
+    renderPeta();
   } else if (page === 'siak') {
     title.textContent = 'Arsip Konsolidasi User SIAK'; bc.innerHTML = '<b>Arsip Konsolidasi User SIAK</b>';
     renderSiakFiles();

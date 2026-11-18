@@ -415,3 +415,56 @@ details.gloss p{margin:8px 0 2px;font-size:12.8px;line-height:1.6;color:var(--in
 .pst-box2 b{font-weight:700;}
 .pst-box2.g{background:var(--green);}
 .pst-box2.r{background:var(--red);}
+
+/* ============ PETA TEMATIK DATA AGREGAT ============ */
+.pt-intro{font-size:13px;line-height:1.6;color:var(--ink-soft);padding:14px 18px;margin-bottom:14px;}
+.pt-intro b{color:var(--blue-900);}
+.pt-tabs{margin-bottom:14px;}
+.pt-tabs .sheet-tab{font-size:12.5px;padding:7px 14px;}
+.pt-grid{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(290px,1fr);gap:20px;align-items:start;}
+.pt-grid .panel{margin-bottom:0;}
+.pt-side{display:flex;flex-direction:column;gap:20px;}
+.pt-maphead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.pt-maphead h3{margin:0;}
+.pt-tools{display:flex;align-items:center;gap:12px;}
+.pt-chk{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;}
+.pt-chk select{font:inherit;font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);}
+.pt-mapbox{position:relative;background:linear-gradient(180deg,#F4F8FF,#EAF2FD);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+.pt-mapbox svg{display:block;width:100%;height:auto;}
+.pt-reg{cursor:pointer;transition:opacity .12s;}
+.pt-mapbox:hover .pt-reg{opacity:.82;}
+.pt-mapbox .pt-reg:hover{opacity:1;stroke:#0B2559;stroke-width:1.8;}
+.pt-tip{display:none;position:absolute;z-index:3;pointer-events:none;background:#0B2559;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;box-shadow:var(--shadow-lift);white-space:nowrap;}
+.pt-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 8px;}
+.pt-leg-i{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink);}
+.pt-sw{display:inline-block;width:16px;height:12px;border-radius:3px;border:1px solid rgba(11,37,89,.15);flex:none;}
+.pt-big{font-size:30px;font-weight:800;color:var(--blue-900);line-height:1.15;}
+.pt-big small{font-size:13px;font-weight:600;color:var(--ink-soft);}
+.pt-meta{font-size:12.5px;color:var(--ink-soft);margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.pt-meta b{color:var(--blue-900);}
+.pt-prof{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px;}
+.pt-prof td{padding:7px 8px;border-top:1px solid var(--line);}
+.pt-prof tr{cursor:pointer;}
+.pt-prof tr:hover td{background:var(--blue-50);}
+.pt-prof tr.on td{background:var(--blue-100);font-weight:700;color:var(--blue-900);}
+.pt-prof .r{text-align:right;white-space:nowrap;}
+.pt-prof .pt-rk{color:var(--ink-soft);width:44px;}
+.pt-rank{max-height:480px;overflow-y:auto;margin:0 -6px;padding:0 6px;}
+.pt-row{display:grid;grid-template-columns:22px minmax(118px,1.3fr) 1fr auto;align-items:center;gap:8px;padding:6px 6px;border-radius:8px;cursor:pointer;font-size:12.5px;}
+.pt-row:hover{background:var(--blue-50);}
+.pt-row.sel{background:var(--blue-100);outline:1px solid var(--blue-200);}
+.pt-row.nodata{opacity:.55;cursor:default;}
+.pt-no{color:var(--ink-soft);font-size:11px;text-align:right;}
+.pt-nm{font-weight:600;color:var(--blue-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pt-bar{height:9px;background:#EEF3FB;border-radius:5px;overflow:hidden;}
+.pt-bar i{display:block;height:100%;border-radius:5px;border:1px solid rgba(11,37,89,.12);}
+.pt-val{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);text-align:right;min-width:56px;}
+@media (max-width:1100px){ .pt-grid{grid-template-columns:1fr;} }
+@media (max-width:560px){ .pt-row{grid-template-columns:20px minmax(70px,1fr) 1fr auto;} }
+@media (max-width:700px){
+  .pt-mapbox{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .pt-mapbox svg{min-width:640px;}
+  #pt-stats{grid-template-columns:repeat(2,1fr);gap:10px;}
+  #pt-stats .stat-card{padding:12px 14px;}
+  #pt-stats .stat-card .num{font-size:21px;}
+}
